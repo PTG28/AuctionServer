@@ -1,0 +1,53 @@
+package Auction.Server;
+
+import java.io.EOFException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.Socket;
+import java.net.SocketException;
+
+public class ClientHandler extends Thread {
+
+    private Socket connection;
+    private ObjectInputStream in;
+    private ObjectOutputStream out;
+
+    public ClientHandler(Socket connection) {
+        this.connection = connection;
+        try {
+            out = new ObjectOutputStream(connection.getOutputStream());
+            out.flush();
+            in = new ObjectInputStream(connection.getInputStream());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void run() {
+        try {
+            while (true){
+
+            String msg = in.readUTF();
+            System.out.println("Message from client: " + msg);
+
+            out.writeUTF("Server received: " + msg);
+            out.flush();
+            }
+
+        }
+        catch (EOFException | SocketException e) {
+            System.out.println("Client disconnected.");
+        }catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (in != null) in.close();
+                if (out != null) out.close();
+                if (connection != null && !connection.isClosed()) connection.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+}
