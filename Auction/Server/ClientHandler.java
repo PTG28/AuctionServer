@@ -29,9 +29,9 @@ public class ClientHandler extends Thread {
             while (true){
 
             String msg = in.readUTF();
-            System.out.println("Message from client: " + msg);
+            String response = handleMessage(msg);
 
-            out.writeUTF("Server received: " + msg);
+            out.writeUTF(response);
             out.flush();
             }
 
@@ -49,5 +49,22 @@ public class ClientHandler extends Thread {
                 e.printStackTrace();
             }
         }
+    }
+
+    private String handleMessage(String msg){
+        System.out.println("Message from client: " + msg);
+        return "Server received: " + msg;
+    }
+    private String handleMessages(String msg) {
+        /*
+        if (msg.startsWith("SELL_ITEM|")) {
+            return handleSellItem(msg);
+        } else if (msg.equals("LIST_ITEMS")) {
+            return handleListItems();
+        } else {
+            return "Unknown command";
+        }
+        */
+         return null;
     }
 }

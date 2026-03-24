@@ -36,4 +36,18 @@ public class Client {
             e.printStackTrace();
         }
     }
+
+    void printmenu(){
+
+        System.out.println("=== MENU ===");
+        System.out.println("1. Sell item");
+        System.out.println("2. List item");
+        System.out.println("3. Exit");
+        System.out.println("Choose action: ");
+
+
+
+
+    }
+
 }

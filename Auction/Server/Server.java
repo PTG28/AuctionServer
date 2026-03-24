@@ -1,10 +1,18 @@
 package Auction.Server;
 
+import Auction.model.Item;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
+
 
 public class Server {
+
+    public static final List<Item> items = new ArrayList<>();
+    public static int nextItemId = 1;
 
     public static void main(String[] args) {
         try {
