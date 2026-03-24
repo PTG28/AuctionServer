@@ -17,11 +17,11 @@ public class Client {
                 ObjectInputStream in = new ObjectInputStream(server.getInputStream());
                 Scanner scan = new Scanner(System.in)
         ) {
+            printmenu();
             while (true){
 
-                System.out.print("Write a msg: ");
                 String msg = scan.nextLine();
-                if(Objects.equals(msg, "exit"))
+                if(Objects.equals(msg, "exit") || Objects.equals(msg, "3") )
                     break;;
 
                 out.writeUTF(msg);
@@ -29,6 +29,8 @@ public class Client {
 
                 String result = in.readUTF();
                 System.out.println("Result: " + result);
+                System.out.print("Choose action or write a msg: ");
+
             }
 
 
@@ -37,13 +39,13 @@ public class Client {
         }
     }
 
-    void printmenu(){
+    static void printmenu(){
 
         System.out.println("=== MENU ===");
         System.out.println("1. Sell item");
         System.out.println("2. List item");
         System.out.println("3. Exit");
-        System.out.println("Choose action: ");
+        System.out.print("Choose action or write a msg: ");
 
 
 
