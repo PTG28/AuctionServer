@@ -9,6 +9,9 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.util.Scanner;
 
+import Auction.model.Item;
+import org.json.JSONObject;
+
 public class ClientHandler extends Thread {
 
     Scanner scan = new Scanner(System.in);
@@ -32,12 +35,15 @@ public class ClientHandler extends Thread {
     public void run() {
         try {
             while (true){
+                out.writeUTF("Welcome to Amesi Dimoprasia");
+                out.flush();
 
-            String msg = in.readUTF();
-            String response = handleMessage(msg);
+                String msg = in.readUTF();
+                String response = handleMessage(msg);
 
-            out.writeUTF(response);
-            out.flush();
+
+                out.writeUTF(response);
+                out.flush();
             }
 
         }
@@ -79,6 +85,23 @@ public class ClientHandler extends Thread {
     }
     private String sellItem(String file) {
         File itemfile = new File(file);
+        String filedata = "";
+
+        while(scan.hasNext()){
+            filedata += scan.nextLine();
+        }
+
+        JSONObject json = new JSONObject(filedata);
+         int id = json.getInt("id");
+         String seller;
+         String name;
+         String description;
+         double startPrice;
+         double currentBid;
+         String highestBidder;
+
+
+
 
         return null;
     }
