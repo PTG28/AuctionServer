@@ -38,9 +38,31 @@ public class ClientHandler extends Thread {
                 out.writeUTF("Welcome to Amesi Dimoprasia");
                 out.flush();
 
-                String msg = in.readUTF();
-                String response = handleMessage(msg);
+            String msg = in.readUTF();
+            String response = handleMessage(msg);
 
+            out.writeUTF(response);
+            out.flush();
+                String[] parts = msg.split(" ");
+
+                switch(parts[0]) {
+
+                    case "REGISTER":
+                        handleRegister(parts);
+                        break;
+
+                    case "LOGIN":
+                        handleLogin(parts);
+                        break;
+
+                    case "ADD_ITEM":
+                        handleAddItem(parts);
+                        break;
+
+                    default:
+                        out.writeUTF("Unknown command");
+                        out.flush();
+                }
 
                 out.writeUTF(response);
                 out.flush();
@@ -108,5 +130,50 @@ public class ClientHandler extends Thread {
 
     private String listItem(){
         return null;
+    }
+
+    // ================= METHODS =================
+
+    private void handleRegister(String[] parts) throws Exception {
+        String username = parts[1];
+        String password = parts[2];
+
+        if(ServerState.users.containsKey(username)) {
+            out.writeUTF("Username exists");
+        } else {
+            ServerState.users.put(username, new User(username, password));
+            out.writeUTF("Register successful");
+        }
+        out.flush();
+    }
+
+    private void handleLogin(String[] parts) throws Exception {
+        String username = parts[1];
+        String password = parts[2];
+
+        User user = ServerState.users.get(username);
+
+        if(user != null && user.password.equals(password)) {
+            out.writeUTF("Login successful");
+        } else {
+            out.writeUTF("Login failed");
+        }
+        out.flush();
+    }
+
+    private void handleAddItem(String[] parts) throws Exception {
+
+        String objectId = parts[1];
+        String desc = parts[2];
+        double startBid = Double.parseDouble(parts[3]);
+        int duration = Integer.parseInt(parts[4]);
+        String seller = parts[5];
+
+        Item item = new Item(objectId, desc, startBid, duration, seller);
+
+        ServerState.auctionQueue.add(item);
+
+        out.writeUTF("Item added to auction queue");
+        out.flush();
     }
 }
