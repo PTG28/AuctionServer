@@ -39,7 +39,7 @@ public class ClientHandler extends Thread {
                 out.writeUTF(response);
                 out.flush();
 
-                if (msg.equals("3"))
+                if (msg.equals("5"))
                     break;
             }
         } catch (EOFException | SocketException e) {
@@ -66,10 +66,16 @@ public class ClientHandler extends Thread {
                 if (parts.length < 2 || parts[1].isEmpty())
                     return ("Missing file name");
                 return sellItem(parts[1].trim());
+
             case "2":
                 return listItems();
 
             case "3":
+                if(parts[1].isEmpty())
+                    return("Product index missing");
+                return listItemDetails(Integer.parseInt(parts[1]));
+
+            case "5":
                 return ("Thank you for your attendance! Hope to see you back soon");
 
             default:
@@ -150,7 +156,15 @@ public class ClientHandler extends Thread {
             if(index < 0 || index >= Server.items.size()) return "Invalid item number";
 
             Item item = Server.items.get(index);
-            return item.toString();
+            //return item.toString();
+            return "ID: " + item.getId() +
+                    "\nSeller: " + item.getSeller() +
+                    "\nItem Name: " + item.getName() +
+                    "\nDescription: " + item.getDescription() +
+                    "\nStarting Price: " + item.getStartPrice() +
+                    "\nCurrent Bid: " + item.getCurrentBid() +
+                    "\nHighest Bidder: " + item.getHighestBidder() +
+                    "\nAuction Time: " + item.getAuction_duration();
         }
     }
 

@@ -40,7 +40,16 @@ public class Client {
                         break;
 
                     case "3":
-                        out.writeUTF("3");
+                        System.out.print("Choose the item's index to list more details: ");
+                        String index = scan.next().trim();
+                        out.writeUTF("3|" + index);
+                        out.flush();
+
+                        System.out.println(in.readUTF());
+                        break;
+
+                    case "5":
+                        out.writeUTF("5");
                         out.flush();
 
                         System.out.println(in.readUTF());
@@ -64,8 +73,10 @@ public class Client {
         System.out.println("\nWelcome to Amesi Dimoprasia");
         System.out.println("=== MENU ===");
         System.out.println("1. Sell item");
-        System.out.println("2. List item");
-        System.out.println("3. Exit");
+        System.out.println("2. List items");
+        System.out.println("3. List item details");
+
+        System.out.println("5. Exit");
         System.out.print("Choose action: ");
     }
 
