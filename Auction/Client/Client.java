@@ -18,38 +18,55 @@ public class Client {
                 Scanner scan = new Scanner(System.in)
         ) {
             printmenu();
-            while (true){
+            boolean running = true;
+            while (running){
+                String msg = scan.nextLine().trim();
 
-                String msg = scan.nextLine();
-                if(Objects.equals(msg, "exit") || Objects.equals(msg, "3") )
-                    break;;
+                switch (msg){
+                    case "1":
+                        System.out.print("Please provide the name of the file which includes the item(s) for sale: ");
+                        String filename = scan.nextLine().trim();
+                        out.writeUTF("1|" + filename);
+                        out.flush();
 
-                out.writeUTF(msg);
-                out.flush();
+                        System.out.println(in.readUTF());
+                        break;
 
-                String result = in.readUTF();
-                System.out.println("Result: " + result);
-                System.out.print("Choose action or write a msg: ");
+                    case "2":
+                        out.writeUTF("2");
+                        out.flush();
+
+                        System.out.println(in.readUTF());
+                        break;
+
+                    case "3":
+                        out.writeUTF("3");
+                        out.flush();
+
+                        System.out.println(in.readUTF());
+                        running = false;
+                        break;
+
+                    default:
+                        System.out.println("Invalid option. Please try again.");
+                }
+
+                if(running == true)
+                    System.out.print("Choose action: ");
 
             }
-
-
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     static void printmenu(){
-
+        System.out.println("\nWelcome to Amesi Dimoprasia");
         System.out.println("=== MENU ===");
         System.out.println("1. Sell item");
         System.out.println("2. List item");
         System.out.println("3. Exit");
-        System.out.print("Choose action or write a msg: ");
-
-
-
-
+        System.out.print("Choose action: ");
     }
 
 }

@@ -1,0 +1,5 @@
+Seller : Tate
+Item name : Legacy Vault
+Description : Carry your stuff with style
+Starting price : 190.00
+Auction time : 300

@@ -8,27 +8,32 @@ public class Item {
     private double startPrice;
     private double currentBid;
     private String highestBidder;
+    private int auction_duration;
 
     public Item() {
     }
 
-    public Item(int id, String seller, String name, String description, double startPrice) {
+    public Item(int id, String seller, String name, String description, double startPrice, int auction_duration) {
         this.id = id;
         this.seller = seller;
         this.name = name;
         this.description = description;
         this.startPrice = startPrice;
         this.currentBid = startPrice;
+        this.auction_duration = auction_duration;
         this.highestBidder = "None";
     }
+
 
     public int getId() { return id; }
     public String getSeller() { return seller; }
     public String getName() { return name; }
     public String getDescription() { return description; }
     public double getStartPrice() { return startPrice; }
+    public int getAuction_duration() { return auction_duration; }
     public double getCurrentBid() { return currentBid; }
     public String getHighestBidder() { return highestBidder; }
+
 
     public void setCurrentBid(double currentBid) { this.currentBid = currentBid; }
     public void setHighestBidder(String highestBidder) { this.highestBidder = highestBidder; }
@@ -42,6 +47,7 @@ public class Item {
                 ", startPrice=" + startPrice +
                 ", currentBid=" + currentBid +
                 ", highestBidder='" + highestBidder + '\'' +
+                ", auction_duration=" + auction_duration +
                 '}';
     }
 }
