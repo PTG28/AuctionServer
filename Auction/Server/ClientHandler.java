@@ -160,7 +160,7 @@ public class ClientHandler extends Thread {
                     }
                 }
             }
-
+//marinos
             if (seller == null || name == null || description == null || startPrice <= 0 || auction_duration <= 0) {
                 return "Error: invalid or incomplete item file data";
             }
