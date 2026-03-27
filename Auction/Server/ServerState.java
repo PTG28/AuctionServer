@@ -10,4 +10,8 @@ public class ServerState {
     public static ConcurrentHashMap<String, User> users = new ConcurrentHashMap<>();
     public static ConcurrentLinkedQueue<Item> auctionQueue = new ConcurrentLinkedQueue<>();
 
+    public static Item currentItem = null;
+    public static boolean auctionActive = false;
+    public static long auctionEndTime = 0;
+
 }

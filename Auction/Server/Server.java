@@ -28,6 +28,9 @@ public class Server {
         serverSocket = new ServerSocket(8080, 10);
         System.out.println("Server Started at 8080");
 
+        AuctionThread auctionThread = new AuctionThread();
+        auctionThread.start();
+
         while (true) {
             Socket client = serverSocket.accept();
             System.out.println("Client connected: " + client.getInetAddress());
