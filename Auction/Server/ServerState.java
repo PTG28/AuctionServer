@@ -12,6 +12,7 @@ public class ServerState {
 
     public final static Map<Integer, Item> items = new HashMap<>();
     public final static Map<String, User> users = new HashMap<>();
-    public static List<ClientHandler> onlineClients = new ArrayList<>();
 
+    public static List<ClientHandler> onlineClients = new ArrayList<>();
+    public  static Map<Integer, Item> auctionQueue = new HashMap<>();
 }
