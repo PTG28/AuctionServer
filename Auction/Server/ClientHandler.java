@@ -1,29 +1,36 @@
 package Auction.Server;
 
-import java.io.File;
+import Auction.model.Bidder;
+import Auction.model.User;
+
 import java.io.EOFException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.SocketException;
-import java.util.Scanner;
 
-import Auction.model.Item;
+import static Auction.Server.Server.items;
 
 
 public class ClientHandler extends Thread {
-
-    //Scanner scan = new Scanner(System.in);
-    private Socket connection;
+    
+    private final Socket connection;
     private ObjectInputStream in;
     private ObjectOutputStream out;
+    private User currentUser = null;
 
-    public ClientHandler(Socket connection) {
+    private final Services services = new Services();
+
+    public ClientHandler(Socket connection) throws Exception {
         this.connection = connection;
         try {
             out = new ObjectOutputStream(connection.getOutputStream());
             out.flush();
             in = new ObjectInputStream(connection.getInputStream());
+
+//            synchronized (ServerState.onlineClients) {
+//                ServerState.onlineClients.add(this);                              // kathe Client pou anoigei mpainei sto list me tous online clients
+//            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -35,11 +42,10 @@ public class ClientHandler extends Thread {
             while (true) {
                 String msg = in.readUTF();
                 String response = handleMessage(msg);
-
                 out.writeUTF(response);
                 out.flush();
 
-                if (msg.equals("5"))
+                if (msg.equals("EXIT"))
                     break;
             }
         } catch (EOFException | SocketException e) {
@@ -57,159 +63,105 @@ public class ClientHandler extends Thread {
         }
     }
 
-    private String handleMessage(String msg) {
+
+    // =========== METHODS  ===========
+    private String handleMessage(String msg) throws Exception {
         System.out.println("Message from client: " + msg);
-        String[] parts = msg.split("\\|", 2);
+
+        String[] parts = msg.split("\\|");
         String command = parts[0];
+
         switch (command) {
-            case "1":
-                if (parts.length < 2 || parts[1].isEmpty())
-                    return ("Missing file name");
-                return sellItem(parts[1].trim());
+            case "LOGIN":
+                if (parts.length < 3 || parts[1].isEmpty() || parts[2].isEmpty())
+                    return ("Missing login info");
+                return handleLogin(parts);
 
-            case "2":
-                return listItems();
+            case "REGISTER":
+                if (parts.length < 5 || parts[1].isEmpty() || parts[2].isEmpty() || parts[3].isEmpty())
+                    return "Missing register info";
+                return handleRegister(parts);
 
-            case "3":
-                if(parts[1].isEmpty())
-                    return("Product index missing");
-                return listItemDetails(Integer.parseInt(parts[1]));
+            case "LOGOUT":
+//                if(currentUser != null){
+//                    currentUser.setActive(false);
+//                    currentUser = null;
+//                }
+                synchronized (ServerState.onlineClients) {
+                    ServerState.onlineClients.remove(this);
+                }
+                return "LOGOUT_SUCCESS";
 
-            case "5":
-                return ("Thank you for your attendance! Hope to see you back soon");
+            case "EXIT":
+                return "Goodbye..! You may have missed a rare item today..";
+
+//-------------------------------------------------------------------------------------------------//
+
+            case "REQUEST_AUCTION":
+                if(parts.length < 2 || parts[1].isEmpty())
+                    return "Missing filename";
+                return services.requestAuction(parts[1]);
+
+            case "LIST_ITEMS":
+                return services.listItems();
+
+            case "LIST_ITEM_DETAILS":
+                return services.listItemDetails(Integer.parseInt(parts[1]));
+
+            case "PLACE_BID":
+                if (parts.length < 3)
+                    return "Missing bid info";
+
+                int itemId = Integer.parseInt(parts[1]);
+                double amount = Double.parseDouble(parts[2]);
+
+                return services.placeBid(itemId, amount, currentUser.getUsername());
+
 
             default:
-                return "Unknown command";
-
+                return "Invalid input";
         }
     }
 
-    private String sellItem (String filename){
-        //int id;
-        String seller = null;
-        String name = null;
-        String description = null;
-        double startPrice = 0;
-        int auction_duration = 0;
+    // *** IMPORTANT *** ADD SYNCHRONISED METHOD WHEN USING THE HASHMAPS
+    private String handleLogin(String[] parts) {
+        String username = parts[1];
+        String password = parts[2];
 
-        try(Scanner fileScanner = new Scanner(new File(filename))){
-            while (fileScanner.hasNextLine()) {
-                String line = fileScanner.nextLine().trim();
-                if (line.isEmpty()) continue;
+        synchronized (ServerState.users) {
 
-                String[] parts = line.split(":", 2); // split only into 2 parts
-                if (parts.length < 2) continue;
-
-                String key = parts[0].trim().toLowerCase();
-                String value = parts[1].trim();
-
-                switch (key) {
-                    case "seller":
-                        seller = value;
-                        break;
-                    case "item name":
-                        name = value;
-                        break;
-                    case "description":
-                        description = value;
-                        break;
-                    case "starting price":
-                        startPrice = Double.parseDouble(value);
-                        break;
-                    case "auction time":
-                        auction_duration = Integer.parseInt(value);
-                        break;
-                }
-            }
-
-            synchronized (Server.items){
-                int id = Server.nextItemId++;
-                Item item = new Item(id, seller, name, description, startPrice, auction_duration);
-                Server.items.add(item);
-                return "Item added successfully";
-            }
-        } catch (Exception e) {
-            return "Error reading file: " + e.getMessage();
-        }
-    }
-
-    private String listItems() {
-        synchronized (Server.items){
-            if(Server.items.isEmpty())
-                return "No items available";
-
-            int counter = 0;
-            StringBuilder sb = new StringBuilder();
-            for(Item item : Server.items){
-                sb.append(counter).append(". ").append(item.getName()).append("\n");
-                counter++;
-            }
-            return sb.toString();
-        }
-    }
-
-    private String listItemDetails(int index){
-        synchronized (Server.items){
-
-            if (Server.items.isEmpty()) return "No available items";
-
-            if(index < 0 || index >= Server.items.size()) return "Invalid item number";
-
-            Item item = Server.items.get(index);
-            //return item.toString();
-            return "ID: " + item.getId() +
-                    "\nSeller: " + item.getSeller() +
-                    "\nItem Name: " + item.getName() +
-                    "\nDescription: " + item.getDescription() +
-                    "\nStarting Price: " + item.getStartPrice() +
-                    "\nCurrent Bid: " + item.getCurrentBid() +
-                    "\nHighest Bidder: " + item.getHighestBidder() +
-                    "\nAuction Time: " + item.getAuction_duration();
-        }
-    }
-
-        // ================= METHODS =================
-
-        private void handleRegister (String[]parts) throws Exception {
-            String username = parts[1];
-            String password = parts[2];
-
-            if (ServerState.users.containsKey(username)) {
-                out.writeUTF("Username exists");
-            } else {
-                ServerState.users.put(username, new User(username, password));
-                out.writeUTF("Register successful");
-            }
-            out.flush();
-        }
-
-        private void handleLogin (String[]parts) throws Exception {
-            String username = parts[1];
-            String password = parts[2];
+            if (!ServerState.users.containsKey(username))
+                return "Username does not exist";
 
             User user = ServerState.users.get(username);
 
-            if (user != null && user.password.equals(password)) {
-                out.writeUTF("Login successful");
-            } else {
-                out.writeUTF("Login failed");
+            if (!user.getPassword().equals(password))
+                return "Wrong password";
+
+            currentUser = user;
+            //currentUser.setActive(true);            // na fugw auto?
+            synchronized (ServerState.onlineClients) {
+                ServerState.onlineClients.add(this);
             }
-            out.flush();
-        }
-
-        private void handleAddItem (String[]parts) throws Exception {
-
-            String objectId = parts[1];
-            String desc = parts[2];
-            double startBid = Double.parseDouble(parts[3]);
-            int duration = Integer.parseInt(parts[4]);
-            String seller = parts[5];
-
-            Item item = new Item();
-
-            Server.items.add(item);
-
-            out.writeUTF("Item added to auction queue");
-            out.flush();
+            return "LOGIN_SUCCESS";
         }
     }
+
+    private String handleRegister(String[] parts) throws Exception {
+        String name = parts[1];
+        String surname = parts[2];
+        String username = parts[3];
+        String password = parts[4];
+
+        synchronized (ServerState.users) {
+
+            if (ServerState.users.containsKey(username))
+                return "Username already exists";
+
+            Bidder bidder = new Bidder(name, surname, username, password);
+            ServerState.users.put(username, bidder);
+
+            return "REGISTER_SUCCESS";
+        }
+    }
+}

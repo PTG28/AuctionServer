@@ -9,12 +9,13 @@ public class Item {
     private double currentBid;
     private String highestBidder;
     private int auction_duration;
+    private static int idCounter = 0;
 
     public Item() {
     }
 
-    public Item(int id, String seller, String name, String description, double startPrice, int auction_duration) {
-        this.id = id;
+    public Item(String seller, String name, String description, double startPrice, int auction_duration) {
+        this.id = idCounter++;
         this.seller = seller;
         this.name = name;
         this.description = description;

@@ -2,7 +2,6 @@ package Auction.Server;
 
 import Auction.model.Item;
 
-import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -17,15 +16,13 @@ public class Server {
     public static void main(String[] args) {
         try {
             new Server().openServer();
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private ServerSocket serverSocket;
-
-    void openServer() throws IOException {
-        serverSocket = new ServerSocket(8080, 10);
+    void openServer() throws Exception {
+        ServerSocket serverSocket = new ServerSocket(8080, 10);
         System.out.println("Server Started at 8080");
 
         while (true) {

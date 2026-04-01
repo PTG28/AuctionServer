@@ -1,13 +1,17 @@
 package Auction.Server;
 
 import Auction.model.Item;
+import Auction.model.User;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class ServerState {
 
-    public static ConcurrentHashMap<String, User> users = new ConcurrentHashMap<>();
-    public static ConcurrentLinkedQueue<Item> auctionQueue = new ConcurrentLinkedQueue<>();
+    public final static Map<Integer, Item> items = new HashMap<>();
+    public final static Map<String, User> users = new HashMap<>();
+    public static List<ClientHandler> onlineClients = new ArrayList<>();
 
 }
