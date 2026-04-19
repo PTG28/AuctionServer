@@ -4,10 +4,14 @@ public class User {
     String username;
     String password;
     private boolean isActive;
+    private int numAuctionsSeller;
+    private int numAuctionsBidder;
+    private String pendingTransactionMessage;
 
     public User(String username, String password) {
         this.username = username;
         this.password = password;
+        this.pendingTransactionMessage = "No completed transaction yet";
     }
 
     public String getUsername() {
@@ -18,7 +22,21 @@ public class User {
         return password;
     }
 
-    public boolean isActive() { return isActive; }
+    public boolean isActive() {
+        return isActive;
+    }
+
+    public int getNumAuctionsSeller() {
+        return numAuctionsSeller;
+    }
+
+    public int getNumAuctionsBidder() {
+        return numAuctionsBidder;
+    }
+
+    public String getPendingTransactionMessage() {
+        return pendingTransactionMessage;
+    }
 
     public void setUsername(String username) {
         this.username = username;
@@ -28,5 +46,19 @@ public class User {
         this.password = password;
     }
 
-    public void setActive(boolean active) { this.isActive = active; }
-}// User
+    public void setActive(boolean active) {
+        this.isActive = active;
+    }
+
+    public void incrementSellerAuctions() {
+        this.numAuctionsSeller++;
+    }
+
+    public void incrementBidderWins() {
+        this.numAuctionsBidder++;
+    }
+
+    public void setPendingTransactionMessage(String pendingTransactionMessage) {
+        this.pendingTransactionMessage = pendingTransactionMessage;
+    }
+}

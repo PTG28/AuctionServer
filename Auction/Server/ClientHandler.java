@@ -9,11 +9,8 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.SocketException;
 
-import static Auction.Server.Server.items;
-
-
 public class ClientHandler extends Thread {
-    
+
     private final Socket connection;
     private ObjectInputStream in;
     private ObjectOutputStream out;
@@ -21,16 +18,12 @@ public class ClientHandler extends Thread {
 
     private final Services services = new Services();
 
-    public ClientHandler(Socket connection) throws Exception {
+    public ClientHandler(Socket connection) {
         this.connection = connection;
         try {
             out = new ObjectOutputStream(connection.getOutputStream());
             out.flush();
             in = new ObjectInputStream(connection.getInputStream());
-
-//            synchronized (ServerState.onlineClients) {
-//                ServerState.onlineClients.add(this);                              // kathe Client pou anoigei mpainei sto list me tous online clients
-//            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -45,21 +38,16 @@ public class ClientHandler extends Thread {
                 out.writeUTF(response);
                 out.flush();
 
-                if (msg.equals("EXIT"))
+                if (msg.equals("EXIT")) {
                     break;
+                }
             }
         } catch (EOFException | SocketException e) {
             System.out.println("Client disconnected.");
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
-            try {
-                if (in != null) in.close();
-                if (out != null) out.close();
-                if (connection != null && !connection.isClosed()) connection.close();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            cleanup();
         }
     }
 
@@ -74,7 +62,7 @@ public class ClientHandler extends Thread {
         switch (command) {
             case "LOGIN":
                 if (parts.length < 3 || parts[1].isEmpty() || parts[2].isEmpty())
-                    return ("Missing login info");
+                    return "Missing login info";
                 return handleLogin(parts);
 
             case "REGISTER":
@@ -83,40 +71,49 @@ public class ClientHandler extends Thread {
                 return handleRegister(parts);
 
             case "LOGOUT":
-//                if(currentUser != null){
-//                    currentUser.setActive(false);
-//                    currentUser = null;
-//                }
-                synchronized (ServerState.onlineClients) {
-                    ServerState.onlineClients.remove(this);
-                }
+                logoutCurrentUser();
                 return "LOGOUT_SUCCESS";
 
             case "EXIT":
+                logoutCurrentUser();
                 return "Goodbye..! You may have missed a rare item today..";
 
 //-------------------------------------------------------------------------------------------------//
 
             case "REQUEST_AUCTION":
-                if(parts.length < 2 || parts[1].isEmpty())
+                if (parts.length < 2 || parts[1].isEmpty()) {
                     return "Missing filename";
-                return services.requestAuction(parts[1]);
+                }
+                if (currentUser == null) {
+                    return "Please login first";
+                }
 
-            case "LIST_ITEMS":
-                return services.listItems();
+                return services.requestAuction(parts[1], currentUser.getUsername());
 
-            case "LIST_ITEM_DETAILS":
-                return services.listItemDetails(Integer.parseInt(parts[1]));
+            case "GET_CURRENT_AUCTION":
+                return services.getCurrentAuction();
+
+            case "GET_AUCTION_DETAILS":
+            case "GET_AUCTIONS_DETAILS":
+                return services.getAuctionDetails();
 
             case "PLACE_BID":
                 if (parts.length < 3)
                     return "Missing bid info";
+                if (currentUser == null) {
+                    return "Please login first";
+                }
 
                 int itemId = Integer.parseInt(parts[1]);
                 double amount = Double.parseDouble(parts[2]);
 
                 return services.placeBid(itemId, amount, currentUser.getUsername());
 
+            case "TRANSACTION":
+                if (currentUser == null) {
+                    return "Please login first";
+                }
+                return services.getTransactionMessage(currentUser.getUsername());
 
             default:
                 return "Invalid input";
@@ -129,7 +126,6 @@ public class ClientHandler extends Thread {
         String password = parts[2];
 
         synchronized (ServerState.users) {
-
             if (!ServerState.users.containsKey(username))
                 return "Username does not exist";
 
@@ -139,9 +135,12 @@ public class ClientHandler extends Thread {
                 return "Wrong password";
 
             currentUser = user;
-            //currentUser.setActive(true);            // na fugw auto?
+            currentUser.setActive(true);
+
             synchronized (ServerState.onlineClients) {
-                ServerState.onlineClients.add(this);
+                if (!ServerState.onlineClients.contains(this)) {
+                    ServerState.onlineClients.add(this);
+                }
             }
             return "LOGIN_SUCCESS";
         }
@@ -154,7 +153,6 @@ public class ClientHandler extends Thread {
         String password = parts[4];
 
         synchronized (ServerState.users) {
-
             if (ServerState.users.containsKey(username))
                 return "Username already exists";
 
@@ -162,6 +160,33 @@ public class ClientHandler extends Thread {
             ServerState.users.put(username, bidder);
 
             return "REGISTER_SUCCESS";
+        }
+    }
+
+    private void logoutCurrentUser() {
+        if (currentUser != null) {
+            currentUser.setActive(false);
+            currentUser = null;
+        }
+        synchronized (ServerState.onlineClients) {
+            ServerState.onlineClients.remove(this);
+        }
+    }
+
+    private void cleanup() {
+        logoutCurrentUser();
+        try {
+            if (in != null) {
+                in.close();
+            }
+            if (out != null) {
+                out.close();
+            }
+            if (connection != null && !connection.isClosed()) {
+                connection.close();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }

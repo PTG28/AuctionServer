@@ -1,17 +1,9 @@
 package Auction.Server;
 
-import Auction.model.Item;
-
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
-
 
 public class Server {
-
-    public static final List<Item> items = new ArrayList<>();
-    public static int nextItemId = 1;
 
     public static void main(String[] args) {
         try {
@@ -24,6 +16,10 @@ public class Server {
     void openServer() throws Exception {
         ServerSocket serverSocket = new ServerSocket(8080, 10);
         System.out.println("Server Started at 8080");
+
+        AuctionManager auctionManager = new AuctionManager();
+        auctionManager.setDaemon(true);
+        auctionManager.start();
 
         while (true) {
             Socket client = serverSocket.accept();

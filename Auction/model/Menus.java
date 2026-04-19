@@ -13,10 +13,11 @@ public class Menus {
     public static String bidderMenu() {
         return "\nBIDDER MENU\n" +
                 "===========\n" +
-                "1. Auction item\n" +
-                "2. List items\n" +
-                "3. List item details\n" +
-                "4. Place bid\n" +
+                "1. Auction Item\n" +
+                "2. Get Current Auction\n" +
+                "3. Get Auction Details\n" +
+                "4. Place Bid\n" +
+                "5. Transaction Status\n" +
                 "0. Logout\n";
     }
 
