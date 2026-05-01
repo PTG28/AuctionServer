@@ -8,16 +8,42 @@ import java.util.Scanner;
 
 public class Services {
 
-    public String requestAuction(String filename, String sellerUsername) {
+
+    private boolean isValidToken(String tokenId) {
+        synchronized (ServerState.onlinePeersByToken) {
+            return ServerState.onlinePeersByToken.containsKey(tokenId);
+        }
+    }
+
+    private boolean isTokenOwnedByUser(String tokenId, String username) {
+        synchronized (ServerState.onlinePeersByToken) {
+            if (!ServerState.onlinePeersByToken.containsKey(tokenId)) {
+                return false;
+            }
+            return ServerState.onlinePeersByToken.get(tokenId).getUsername().equals(username);
+        }
+    }
+
+    public String requestAuction(String filename, String tokenId, String sellerUsername) {
         try {
+            if (!isValidToken(tokenId)) {
+                return "Invalid token";
+            }
+
+            if (!isTokenOwnedByUser(tokenId, sellerUsername)) {
+                return "Token does not belong to current user";
+            }
+
             Item item = parseItemFromFile(filename, sellerUsername);
 
             synchronized (ServerState.items) {
                 ServerState.items.put(item.getId(), item);
             }
+
             synchronized (ServerState.auctionQueue) {
                 ServerState.auctionQueue.add(item);
             }
+
             synchronized (ServerState.users) {
                 User seller = ServerState.users.get(sellerUsername);
                 if (seller != null) {
@@ -55,8 +81,16 @@ public class Services {
             long remainingMillis = Math.max(0L, ServerState.currentAuctionEndTimeMillis - System.currentTimeMillis());
             long remainingSeconds = (remainingMillis + 999L) / 1000L;
 
+            String sellerToken = "UNKNOWN";
+            synchronized (ServerState.usernameToToken) {
+                if (ServerState.usernameToToken.containsKey(currentItem.getSeller())) {
+                    sellerToken = ServerState.usernameToToken.get(currentItem.getSeller());
+                }
+            }
+
             return "item_id=" + currentItem.getId() +
-                    " | seller=" + currentItem.getSeller() +
+                    " | seller_token=" + sellerToken +
+                    " | seller_username=" + currentItem.getSeller() +
                     " | name=" + currentItem.getName() +
                     " | description=" + currentItem.getDescription() +
                     " | highest_bid=" + currentItem.getCurrentBid() +
@@ -65,7 +99,17 @@ public class Services {
         }
     }
 
-    public String placeBid(int itemId, double amount, String bidder) {
+    public String placeBid(int itemId, double amount, String bidder, String tokenId) {
+        if (!isValidToken(tokenId)) {
+            return "Invalid token";
+        }
+
+        if (!isTokenOwnedByUser(tokenId, bidder)) {
+            return "Token does not belong to current user";
+        }
+
+        String broadcastMsg;
+
         synchronized (ServerState.AUCTION_LOCK) {
             if (ServerState.currentItem == null) {
                 return "No active auction";
@@ -91,12 +135,20 @@ public class Services {
 
             item.setCurrentBid(amount);
             item.setHighestBidder(bidder);
+
             synchronized (ServerState.items) {
                 ServerState.items.put(item.getId(), item);
             }
 
-            return "Bid placed successfully. New highest bid: " + amount;
+            broadcastMsg =
+                    "New highest bid for item " + item.getId() +
+                            " (" + item.getName() + ")" +
+                            " | bidder=" + bidder +
+                            " | amount=" + amount;
         }
+
+        broadcastMessage(broadcastMsg);
+        return "Bid placed successfully. New highest bid: " + amount;
     }
 
     public void completeAuctionTransaction(Item item) {
@@ -112,7 +164,8 @@ public class Services {
                 bidder.incrementBidderWins();
                 bidder.setPendingTransactionMessage(
                         "You won item " + item.getId() + " (" + item.getName() + ") with bid " + item.getCurrentBid() +
-                                ". Metadata file: " + item.getMetadataFileName()
+                                ". Contact seller " + item.getSeller() +
+                                " and request metadata file: " + item.getMetadataFileName()
                 );
             }
 
@@ -124,7 +177,6 @@ public class Services {
             }
         }
 
-        item.setSeller(item.getHighestBidder());
         synchronized (ServerState.items) {
             ServerState.items.put(item.getId(), item);
         }
@@ -188,10 +240,149 @@ public class Services {
 
         fileScanner.close();
 
-        if (seller == null || seller.isBlank()) {
-            seller = sellerUsername;
+        seller = sellerUsername;
+        String metadataFileName = new File(filename).getName();
+        return new Item(seller, name, description, startPrice, auctionDuration, metadataFileName);
+
+    }
+
+    public boolean isSellerActive(Item item) {
+        if (item == null) {
+            return false;
         }
 
-        return new Item(seller, name, description, startPrice, auctionDuration, filename);
+        String sellerUsername = item.getSeller();
+        String sellerToken;
+
+        synchronized (ServerState.usernameToToken) {
+            sellerToken = ServerState.usernameToToken.get(sellerUsername);
+        }
+
+        if (sellerToken == null) {
+            return false;
+        }
+
+        synchronized (ServerState.onlinePeersByToken) {
+            if (!ServerState.onlinePeersByToken.containsKey(sellerToken)) {
+                return false;
+            }
+
+            String ip = ServerState.onlinePeersByToken.get(sellerToken).getIpAddress();
+            int port = ServerState.onlinePeersByToken.get(sellerToken).getPort();
+
+            Auction.Client.PeerConnector connector = new Auction.Client.PeerConnector();
+            return connector.checkActive(ip, port);
+        }
     }
+
+    public void cancelAuction(Item item, String reason) {
+        if (item == null) {
+            return;
+        }
+
+        String notificationMessage;
+
+        synchronized (ServerState.AUCTION_LOCK) {
+            if (ServerState.currentItem == null || ServerState.currentItem.getId() != item.getId()) {
+                return;
+            }
+
+            System.out.println("Auction cancelled for item " + item.getId() + ": " + reason);
+
+            notificationMessage =
+                    "Auction cancelled for item " + item.getId() +
+                            " (" + item.getName() + ")" +
+                            " | reason=" + reason;
+
+            ServerState.currentItem = null;
+            ServerState.currentAuctionEndTimeMillis = 0L;
+        }
+
+        broadcastMessage(notificationMessage);
+    }
+    public String getTransactionPeerInfo(String username) {
+        synchronized (ServerState.items) {
+            for (Item item : ServerState.items.values()) {
+                if (item.getHighestBidder().equals(username)) {
+
+                    synchronized (ServerState.AUCTION_LOCK) {
+                        if (ServerState.currentItem != null && ServerState.currentItem.getId() == item.getId()) {
+                            return "Auction is still running";
+                        }
+                    }
+
+                    String sellerUsername = item.getSeller();
+
+                    String sellerToken;
+                    synchronized (ServerState.usernameToToken) {
+                        sellerToken = ServerState.usernameToToken.get(sellerUsername);
+                    }
+
+                    if (sellerToken == null) {
+                        return "Seller is offline";
+                    }
+
+                    synchronized (ServerState.onlinePeersByToken) {
+                        if (!ServerState.onlinePeersByToken.containsKey(sellerToken)) {
+                            return "Seller is offline";
+                        }
+
+                        String ip = ServerState.onlinePeersByToken.get(sellerToken).getIpAddress();
+                        int port = ServerState.onlinePeersByToken.get(sellerToken).getPort();
+
+                        return "TRANSACTION_INFO|" +
+                                item.getId() + "|" +
+                                sellerUsername + "|" +
+                                ip + "|" +
+                                port + "|" +
+                                item.getMetadataFileName();
+                    }
+                }
+            }
+        }
+
+        return "No pending transaction";
+    }
+
+    public String confirmTransfer(int itemId, String buyerUsername, String tokenId) {
+        if (!isValidToken(tokenId)) {
+            return "Invalid token";
+        }
+
+        if (!isTokenOwnedByUser(tokenId, buyerUsername)) {
+            return "Token does not belong to current user";
+        }
+
+        synchronized (ServerState.items) {
+            if (!ServerState.items.containsKey(itemId)) {
+                return "Item not found";
+            }
+
+            Item item = ServerState.items.get(itemId);
+
+            synchronized (ServerState.AUCTION_LOCK) {
+                if (ServerState.currentItem != null && ServerState.currentItem.getId() == itemId) {
+                    return "Auction is still running";
+                }
+            }
+
+            if (!item.getHighestBidder().equals(buyerUsername)) {
+                return "Only the winning bidder can confirm transfer";
+            }
+
+            item.setSeller(buyerUsername);
+            ServerState.items.put(item.getId(), item);
+
+            return "TRANSFER_CONFIRMED";
+        }
+    }
+
+    public void broadcastMessage(String message) {
+        synchronized (ServerState.onlineClients) {
+            for (ClientHandler clientHandler : ServerState.onlineClients) {
+                clientHandler.sendAsyncMessage(message);
+            }
+        }
+    }
+
 }

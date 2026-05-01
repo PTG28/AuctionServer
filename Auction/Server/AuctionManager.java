@@ -49,6 +49,12 @@ public class AuctionManager extends Thread {
         while (true) {
             Thread.sleep(1000);
 
+            // check seller active
+            if (!services.isSellerActive(item)) {
+                services.cancelAuction(item, "Seller is offline");
+                return;
+            }
+
             long remainingMillis;
             synchronized (ServerState.AUCTION_LOCK) {
                 if (ServerState.currentItem == null || ServerState.currentItem.getId() != item.getId()) {
@@ -87,4 +93,5 @@ public class AuctionManager extends Thread {
             ServerState.currentAuctionEndTimeMillis = 0L;
         }
     }
+
 }

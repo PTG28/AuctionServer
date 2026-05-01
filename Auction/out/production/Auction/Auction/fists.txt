@@ -1,5 +1,0 @@
-Seller : Tate
-Item name : Wudan Fists
-Description : Become capable in every realm
-Starting price : 147.00
-Auction time : 200
